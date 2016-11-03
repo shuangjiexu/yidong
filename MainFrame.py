@@ -4,6 +4,8 @@ import wx
 import time
 import os
 
+import numpy
+
 ########################################################################
 # set the file filter
 wildcard1 = "Txt source (*.txt)|*.txt|"\
