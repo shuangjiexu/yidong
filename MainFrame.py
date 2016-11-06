@@ -84,6 +84,8 @@ class Demo(wx.Frame):
 
         self.InputBigDataButton = wx.Button(self.Panel2, label=u'导入数据')
         self.InputBigDataButton.Bind(wx.EVT_BUTTON, self.InputBigData)
+        # init opend file list of BigDataAnalysis
+        self.BigDataAnalysisFileList = []
 
         self.ShowDataButton = wx.Button(self.Panel2, label=u'显示数据')
         self.ShowDataButton.Bind(wx.EVT_BUTTON, self.ShowData)
@@ -321,7 +323,6 @@ class Demo(wx.Frame):
                 self.Show_Content("Only open one file each time!")
                 return False
             tem = temp.split('.')
-            print tem
             if (tem[-1] != 'txt'):
                 self.Show_Content("Only open .txt file!")
                 return False
@@ -332,6 +333,8 @@ class Demo(wx.Frame):
             file = open(temp)
             self.Show_Content(file.read().decode('utf-8'))
             file.close()
+            self.BigDataAnalysisFileList.append(temp)
+            print self.BigDataAnalysisFileList
         dlg.Destroy()
 
     def InputData(self, evt):
@@ -350,7 +353,6 @@ class Demo(wx.Frame):
                 self.Show_Content("Only open one file each time!")
                 return False
             tem = temp.split('.')
-            print tem
             if (tem[-1] != 'txt'):
                 self.Show_Content("Only open .txt file!")
                 return False
@@ -358,9 +360,6 @@ class Demo(wx.Frame):
             # set the value of TextCtrl[filename]
             # self.filename.SetValue(temp)
             # set the value to the TextCtrl[contents]
-            file = open(temp)
-            self.Show_Content(file.read().decode('utf-8'))
-            file.close()
         dlg.Destroy()
 
     def InputUserData(self, evt):
@@ -393,16 +392,36 @@ class Demo(wx.Frame):
         dlg.Destroy()
 
     def DataProcess(self, evt):
-        pass
+        ds = DataProcessDialog(self)
+        ds.Show()
+
+    def ComputingSetting(self, operationNum):
+        self.ComputingNum = operationNum
 
     def ShowData(self, evt):
         dsSet = [20,50]
-        ds = DataShow(dsSet)
+        # ds = DataShow(dsSet)
+        ds = DataShowDialog(self)
         ds.Show()
 
-
-        print dsSet
-
+    def ShowGrid(self,filePath, colNum):
+        '''
+        show content according to DataShowDialog
+        filePath: file path to read
+        colNum: lines to show
+        '''
+        file = open(filePath)
+        contentList = file.readlines()
+        self.contentSelected = []
+        content = ''
+        if colNum > len(contentList):
+            colNum = len(contentList)
+        for i in range(colNum):
+            content = content + contentList[i]
+            self.contentSelected.append(contentList[i])
+        # self.Show_Content(content.decode('utf-8'))
+        file.close()
+        self.grids = wx.TextCtrl(self.Panel3, -1, content.decode('utf-8'), style=wx.TE_MULTILINE | wx.TE_RICH2)
 
     def Computing(self, evt):
         pass
@@ -435,14 +454,14 @@ class Demo(wx.Frame):
         f = wx.Font(18, wx.ROMAN, wx.NORMAL, wx.NORMAL, False)
         self.bar.SetStyle(0, self.bar.GetLastPosition(), wx.TextAttr("black", "white", f))
 
-class DataShow(wx.Frame):
-    def __init__(self, ShowSet):
-        wx.Frame.__init__(self,None,-1,
-                          title=u"大数据分析-数据显示",
-                          size=(500,300),
-                          style=wx.DEFAULT_FRAME_STYLE
-        )
-        self.Bind(wx.EVT_CLOSE, self.OnClose)
+class DataShowDialog(wx.Dialog): 
+    def __init__(self, parent): 
+        super(DataShowDialog, self).__init__(parent, title = u"大数据分析-数据显示", size = (700,300)) 
+        self.parent = parent
+
+        # get file list from parent
+        self.fileList = parent.BigDataAnalysisFileList
+
         self.Panel_ds = wx.Panel(self)
         #self.Panel_ds.SetBackgroundColour('Red')
 
@@ -456,8 +475,7 @@ class DataShow(wx.Frame):
         self.title = wx.StaticText(self.Panel_ds1, -1, u"大数据平台数据显示设置:", style=wx.ALIGN_CENTER)
 
         self.DataSource = wx.StaticText(self.Panel_ds, -1, u"数据源选择:", style=wx.ALIGN_CENTER)
-        self.sampleList = [u"数据源1", u"数据源2", u"数据源3"]
-        self.choices = wx.Choice(self.Panel_ds, -1, choices=self.sampleList, style=wx.ALIGN_CENTER)
+        self.choices = wx.Choice(self.Panel_ds, -1, choices=self.fileList, style=wx.ALIGN_CENTER)
 
         self.datacols = wx.StaticText(self.Panel_ds, -1, u"数据行数:", style=wx.ALIGN_CENTER)
         self.DataCols = wx.TextCtrl(self.Panel_ds, -1, r'1000')
@@ -498,8 +516,11 @@ class DataShow(wx.Frame):
         self.Pbox.Add(self.P3box, proportion=0, flag=wx.ALL, border=10)
 
         self.SetSizer(self.Pbox)
-        # boxSizer set*********************************
+
     def Set(self, evt):
+        self.selected = self.choices.GetSelection()
+        filePath = self.fileList[self.selected]
+        self.parent.ShowGrid(filePath, int(self.DataCols.GetValue()) )
         self.Show(False)
 
     def exit_out(self, event):
@@ -508,6 +529,72 @@ class DataShow(wx.Frame):
     def OnClose(self, evt):
         evt.Skip()
 
+class DataProcessDialog(wx.Dialog): 
+    def __init__(self, parent): 
+        super(DataProcessDialog, self).__init__(parent, title = u"大数据分析-数据显示", size = (500,300)) 
+        self.parent = parent
+
+        self.Panel_ds = wx.Panel(self)
+        #self.Panel_ds.SetBackgroundColour('Red')
+
+        self.Panel_ds1 = wx.Panel(self)
+        #self.Panel_ds1.SetBackgroundColour('Green')
+
+        self.Panel_ds2 = wx.Panel(self)
+        #self.Panel_ds2.SetBackgroundColour('Blue')
+
+        self.typeList = [u'求和', u'累乘', u'掉线率计算']
+
+        self.title = wx.StaticText(self.Panel_ds1, -1, u"大数据平台数据操作设置:", style=wx.ALIGN_CENTER)
+
+        self.DataSource = wx.StaticText(self.Panel_ds, -1, u"数据操作类型选择:", style=wx.ALIGN_CENTER)
+        self.choices = wx.Choice(self.Panel_ds, -1, choices=self.typeList, style=wx.ALIGN_CENTER)
+
+        self.SetButton = wx.Button(self.Panel_ds2, label=u'设置')
+        self.SetButton.Bind(wx.EVT_BUTTON, self.Set)
+        self.exitbutton = wx.Button(self.Panel_ds2, label=u'退出')
+        self.exitbutton.Bind(wx.EVT_BUTTON, self.exit_out)
+        #boxSizer set*********************************
+
+        self.P1box = wx.BoxSizer()
+        self.P1box.Add(self.title, proportion=0, flag=wx.ALL, border=10)
+        self.Panel_ds1.SetSizer(self.P1box)
+
+        self.P2box = wx.BoxSizer(wx.VERTICAL)
+        self.P2box.Add(self.SetButton, proportion=0, flag=wx.ALL, border=10)
+        self.P2box.Add(self.exitbutton, proportion=0, flag=wx.ALL, border=10)
+        self.Panel_ds2.SetSizer(self.P2box)
+
+        self.P221box = wx.BoxSizer()
+        self.P221box.Add(self.DataSource, proportion=0, flag=wx.ALL, border=10)
+        self.P221box.Add(self.choices, proportion=0, flag=wx.ALL, border=10)
+        self.P222box = wx.BoxSizer()
+
+        self.P22box = wx.BoxSizer(wx.VERTICAL)
+        self.P22box.Add(self.P221box, proportion=0, flag=wx.ALL, border=10)
+        self.P22box.Add(self.P222box, proportion=0, flag=wx.ALL, border=10)
+        self.Panel_ds.SetSizer(self.P22box)
+
+        self.P3box = wx.BoxSizer()
+        self.P3box.Add(self.Panel_ds, proportion=0, flag=wx.ALL, border=10)
+        self.P3box.Add(self.Panel_ds2, proportion=0, flag=wx.ALL, border=10)
+
+        self.Pbox = wx.BoxSizer(wx.VERTICAL)
+        self.Pbox.Add(self.Panel_ds1, proportion=0, flag=wx.ALL, border=10)
+        self.Pbox.Add(self.P3box, proportion=0, flag=wx.ALL, border=10)
+
+        self.SetSizer(self.Pbox)
+
+    def Set(self, evt):
+        self.selected = self.choices.GetSelection()
+        self.parent.ComputingSetting(int(self.selected) )
+        self.Show(False)
+
+    def exit_out(self, event):
+        self.Show(False)
+
+    def OnClose(self, evt):
+        evt.Skip()
 
 class log(wx.Frame):
     def __init__(self):
