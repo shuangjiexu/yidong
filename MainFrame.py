@@ -1,8 +1,11 @@
 # coding:UTF-8
+import datetime
 import sys
 import wx
 import time
 import os
+import threading
+import random
 ########################################################################
 # set the file filter
 wildcard1 = "Txt source (*.txt)|*.txt|"\
@@ -12,6 +15,166 @@ wildcard2 = "Txt source (*.txt)|*.txt|"\
     "Python source (*.py; *.pyc)|*.py;*.pyc|" \
             "All files (*.*)|*.*"
 ########################################################################
+class Computing(threading.Thread):
+    """
+    This computing bigdata thread.
+    """
+    def __init__(self, filePath, colNum,flag, window):
+        threading.Thread.__init__(self)
+        self.filePath = filePath
+        self.window = window
+        self.colNum = colNum
+        self.flag = flag
+        self.messageDelay = 0.1 + 2.0 * random.random()
+        #初始化实例时即可开始run
+        self.start()
+
+    def run(self):
+        OutGrids = ''#用于统计数据，将计算所用时间综合显示\
+        ISOTIMEFORMAT = '%Y-%m-%d %X'#设定时间显示格式
+        try:
+            if(self.flag == 0):
+                OutGrids = u"常规数据计算开始时间:"
+                wx.CallAfter(self.window.GridsMsg, OutGrids, 1)
+                msg = u"开始常规数据计算!"
+                wx.CallAfter(self.window.LogMessage, msg)
+                fout = open(self.filePath)
+                contents = fout.readlines()[:self.colNum]
+                temp = 0
+                i = 0
+                for content in contents:
+                    if (i%1000 == 0):
+                        msg = u"正在计算第" + str(i/1000 + 1) + u"000行数据！"
+                        wx.CallAfter(self.window.LogMessage, msg)
+                    data = content.rsplit(" ")
+                    diaoxian = (float(data[1]) - float(data[2])) / (float(data[3]) - float(data[4].rstrip("\n")))
+                    temp += diaoxian
+                    i+=1
+                    #count = count + 1
+                    #keepGoing = dialog.Update(count)
+                temp /= self.colNum
+                fout = open("view.txt", 'w+')
+                fout.write(str(self.colNum) +" "+ str(temp))
+                fout.close()
+                #dialog.Destroy()#结束进度条
+                msg = u"数据计算结束!"
+                wx.CallAfter(self.window.LogMessage, msg)
+                OutGrids = u"常规数据计算结束时间:"
+                wx.CallAfter(self.window.GridsMsg, OutGrids, 2)
+                OutGrids = u"常规数据计算所用时间:"
+                wx.CallAfter(self.window.GridsMsg, OutGrids, 3)
+                OutGrids = u"计算结果为:"+str(temp)
+                wx.CallAfter(self.window.GridsMsg, OutGrids)
+            elif(self.flag == 1):
+                OutGrids = u"物化视图计算开始时间:"
+                wx.CallAfter(self.window.GridsMsg, OutGrids, 1)
+                msg = u"开始使用物化视图方法进行数据计算!"
+                wx.CallAfter(self.window.LogMessage, msg)
+                ffout = open("view.txt", 'r+')
+                view = ffout.readline().split(' ')
+                if(self.colNum >= int(view[0])):
+                    msg = u"找到可用视图!"
+                    wx.CallAfter(self.window.GridsMsg, msg)
+                    wx.CallAfter(self.window.LogMessage, msg)
+                    fout = open(self.filePath)
+                    contents = fout.readlines()[:self.colNum]
+                    temp = 0
+                    otemp = float(view[1])
+                    onum = int(view[0])
+                    i = onum
+                    for content in contents[onum:]:
+                        if (i % 1000 == 0):
+                            msg = u"正在计算第" + str(i/1000 + 1) + u"000行数据！"
+                            wx.CallAfter(self.window.LogMessage, msg)
+                        data = content.rsplit(" ")
+                        diaoxian = (float(data[1]) - float(data[2])) / (float(data[3]) - float(data[4].rstrip("\n")))
+                        temp += diaoxian
+                        i+=1
+                    temp += onum * otemp
+                    temp /= self.colNum
+                    fout = open("view.txt", 'w+')
+                    fout.write(str(self.colNum) + " " + str(temp))
+                    fout.close()
+                    msg = u"数据计算结束!使用物化视图计算方法！"
+                    wx.CallAfter(self.window.LogMessage, msg)
+                    OutGrids = u"物化视图计算结束时间:"
+                    wx.CallAfter(self.window.GridsMsg, OutGrids, 2)
+                    OutGrids = u"物化视图计算所用时间:"
+                    wx.CallAfter(self.window.GridsMsg, OutGrids, 3)
+                    OutGrids = u"计算结果为:" + str(temp)
+                    wx.CallAfter(self.window.GridsMsg, OutGrids)
+                else:
+                    msg = u"未找到可用视图!"
+                    wx.CallAfter(self.window.GridsMsg, msg)
+                    wx.CallAfter(self.window.LogMessage, msg)
+                    fout = open(self.filePath)
+                    contents = fout.readlines()[:self.colNum]
+                    temp = 0
+                    i = 0
+                    for content in contents:
+                        if(i%1000 == 0):
+                            msg = u"正在计算第" + str(i/1000 + 1) + u"000行数据！"
+                            wx.CallAfter(self.window.LogMessage, msg)
+                        data = content.rsplit(" ")
+                        diaoxian = (float(data[1]) - float(data[2])) / (float(data[3]) - float(data[4].rstrip("\n")))
+                        temp += diaoxian
+                        i+=1
+                    temp /= self.colNum
+                    fout = open("view.txt", 'w+')
+                    fout.write(str(self.colNum) + " " + str(temp))
+                    fout.close()
+                    msg = u"数据计算结束!未查找到视图，使用常规计算方法！"
+                    wx.CallAfter(self.window.LogMessage, msg)
+                    OutGrids = u"常规数据计算结束时间:"
+                    wx.CallAfter(self.window.GridsMsg, OutGrids, 2)
+                    OutGrids = u"常规数据计算所用时间:"
+                    wx.CallAfter(self.window.GridsMsg, OutGrids, 3)
+                    OutGrids = u"计算结果为:" + str(temp)
+                    wx.CallAfter(self.window.GridsMsg, OutGrids)
+        except:
+            msg = u"计算出现错误，请重新操作！"
+            wx.CallAfter(self.window.LogMessage, msg)
+
+class OpenFile(threading.Thread):
+    """
+    This open bigdata file thread.
+    """
+    def __init__(self, filePath, colNum,window):
+        threading.Thread.__init__(self)
+        self.filePath = filePath
+        self.window = window
+        self.colNum = colNum
+        self.messageDelay = 0.1 + 2.0 * random.random()
+        #初始化实例时即可开始run
+        self.start()
+
+    def run(self):
+        try:
+            msg = u"数据读取开始!"
+            wx.CallAfter(self.window.LogMessage, msg)
+            file = open(self.filePath)
+            contentList = file.readlines()
+            self.contentSelected = []
+            content = ''
+            if self.colNum > len(contentList):
+                self.colNum = len(contentList)
+            for i in range(self.colNum):
+                if(i%1000 == 0):
+                    msg = u"正在读取前" + str(i/1000 + 1) +u"000行数据！"
+                    wx.CallAfter(self.window.LogMessage, msg)
+                content = content + contentList[i]
+                self.contentSelected.append(contentList[i])
+            wx.CallAfter(self.window.Set_grids, content.decode('utf-8'))
+            file.close()
+
+            msg = u"数据读取结束!"
+            wx.CallAfter(self.window.LogMessage, msg)
+            msg = u"当前处理文件：" + self.filePath + "\t" + u"显示行数：" + str(self.colNum)
+            wx.CallAfter(self.window.LogMessage, msg)
+        except:
+            msg = u"未进行显示数据操作！"
+            wx.CallAfter(self.window.LogMessage, msg)
+
 class Demo(wx.Frame):
     def __init__(self):
         wx.Frame.__init__(self, None, -1,
@@ -82,12 +245,12 @@ class Demo(wx.Frame):
         self.sampleList3 = [u"常规方法", u"物化视图"]
         self.choices3 = wx.Choice(self.Panel2, -1, choices=self.sampleList3, style=wx.ALIGN_CENTER)
 
-        self.InputBigDataButton = wx.Button(self.Panel2, label=u'导入数据')
+        self.InputBigDataButton = wx.Button(self.Panel2, label=u'添加数据源')
         self.InputBigDataButton.Bind(wx.EVT_BUTTON, self.InputBigData)
         # init opend file list of BigDataAnalysis
         self.BigDataAnalysisFileList = []
 
-        self.ShowDataButton = wx.Button(self.Panel2, label=u'显示数据')
+        self.ShowDataButton = wx.Button(self.Panel2, label=u'导入并显示数据')
         self.ShowDataButton.Bind(wx.EVT_BUTTON, self.ShowData)
 
         self.DataProcessButton = wx.Button(self.Panel2, label=u'数据操作')
@@ -133,6 +296,7 @@ class Demo(wx.Frame):
         # ***************panel 2  part 4 --case 2**********************************************
 
         # ***************panel 3**********************************************
+        self.grids = wx.TextCtrl(self.Panel3, -1, style=wx.TE_MULTILINE | wx.TE_RICH2)
         # ***************panel 3**********************************************
 
         # ***************panel 4**********************************************
@@ -240,11 +404,15 @@ class Demo(wx.Frame):
         self.Panel2.SetSizer(self.P2box)
         # ***************panel 2 box set**********************************************
         # ***************panel 3 box set**********************************************
+        self.P3abox = wx.BoxSizer()
+        self.P3abox.Add(self.grids, proportion=1, flag=wx.EXPAND | wx.ALL, border=20)
+
+        self.Panel3.SetSizer(self.P3abox)
         # ***************panel 3 box set**********************************************
 
         # ***************panel 4 box set**********************************************
         self.P4abox = wx.BoxSizer()
-        self.P4abox.Add(self.bar, proportion=1, flag=wx.EXPAND | wx.ALL, border=20)
+        self.P4abox.Add(self.bar, proportion=1, flag=wx.EXPAND | wx.ALL, border=0)
 
         self.Panel4.SetSizer(self.P4abox)
         # ***************panel 4 box set**********************************************
@@ -255,8 +423,8 @@ class Demo(wx.Frame):
         self.mbox.Add(self.Panel3, proportion=20, flag=wx.ALL | wx.EXPAND, border=10)
 
         self.tbox = wx.BoxSizer()
-        self.tbox.Add(self.Panel1, proportion=1, flag=wx.ALL | wx.EXPAND, border=10)
-        self.tbox.Add(self.mbox, proportion=5, flag=wx.ALL | wx.EXPAND, border=10)
+        self.tbox.Add(self.Panel1, proportion=2, flag=wx.ALL | wx.EXPAND, border=10)
+        self.tbox.Add(self.mbox, proportion=9, flag=wx.ALL | wx.EXPAND, border=10)
 
         self.wbox = wx.BoxSizer(wx.VERTICAL)
         self.wbox.Add(self.tbox, proportion=10, flag=wx.ALL | wx.EXPAND, border=10)
@@ -331,7 +499,7 @@ class Demo(wx.Frame):
             # self.filename.SetValue(temp)
             # set the value to the TextCtrl[contents]
             file = open(temp)
-            self.Show_Content(file.read().decode('utf-8'))
+            #self.Show_Content(file.read().decode('utf-8'))
             file.close()
             self.BigDataAnalysisFileList.append(temp)
             print self.BigDataAnalysisFileList
@@ -399,8 +567,6 @@ class Demo(wx.Frame):
         self.ComputingNum = operationNum
 
     def ShowData(self, evt):
-        dsSet = [20,50]
-        # ds = DataShow(dsSet)
         ds = DataShowDialog(self)
         ds.Show()
 
@@ -410,21 +576,25 @@ class Demo(wx.Frame):
         filePath: file path to read
         colNum: lines to show
         '''
-        file = open(filePath)
-        contentList = file.readlines()
-        self.contentSelected = []
-        content = ''
-        if colNum > len(contentList):
-            colNum = len(contentList)
-        for i in range(colNum):
-            content = content + contentList[i]
-            self.contentSelected.append(contentList[i])
-        # self.Show_Content(content.decode('utf-8'))
-        file.close()
-        self.grids = wx.TextCtrl(self.Panel3, -1, content.decode('utf-8'), style=wx.TE_MULTILINE | wx.TE_RICH2)
+
+        self.filePath = filePath
+        self.colNum = colNum
+        #实例化导入数据对象
+        OpenFile(self.filePath,self.colNum,self)
 
     def Computing(self, evt):
-        pass
+        try:
+            self.selected = self.choices3.GetSelection()
+            print type(self.selected)
+            print self.selected
+            if(self.selected== 0):
+                Computing(self.filePath, self.colNum ,0, self)
+            elif(self.selected == 1):
+                Computing(self.filePath, self.colNum, 1, self)
+            else:
+                self.Show_Content("Error!", 1)
+        except:
+            self.Show_Content("Error!", 1)
 
     def ScreenData(self, evt):
         pass
@@ -448,15 +618,71 @@ class Demo(wx.Frame):
         self.choices2.Set(self.sampleList2[self.sampleList1[self.choices1.GetStringSelection()]])
         self.P2box.Layout()
 
-    def Show_Content(self, con):
-        self.bar.SetValue(con)
-        self.bar.SetInsertionPoint(0)
+    def Set_grids(self, con):
+        self.grids.SetValue(con)
+        self.grids.SetInsertionPoint(0)
         f = wx.Font(18, wx.ROMAN, wx.NORMAL, wx.NORMAL, False)
+        self.grids.SetStyle(0, self.grids.GetLastPosition(), wx.TextAttr("black", "white", f))
+
+    def Show_Content(self, con, flag = 0):
+        if(flag == 0):
+            self.bar.AppendText(con)
+            ISOTIMEFORMAT = '%Y-%m-%d %X'
+            cc = datetime.datetime.now().strftime(ISOTIMEFORMAT)
+            self.bar.AppendText("   "+cc + "\n")
+            self.bar.SetInsertionPoint(0)
+            f = wx.Font(15, wx.ROMAN, wx.NORMAL, wx.NORMAL, False)
+            self.bar.SetStyle(0, self.bar.GetLastPosition(), wx.TextAttr("black", "white", f))
+        else:
+            self.bar.SetValue(con)
+            self.bar.SetInsertionPoint(0)
+            f = wx.Font(15, wx.ROMAN, wx.NORMAL, wx.NORMAL, False)
+            self.bar.SetStyle(0, self.bar.GetLastPosition(), wx.TextAttr("black", "white", f))
+
+    def show_time():
+        ISOTIMEFORMAT = '%Y-%m-%d %X'
+        print time.strftime(ISOTIMEFORMAT, time.localtime())
+        return time.strftime(ISOTIMEFORMAT, time.localtime())
+
+    def GridsMsg(self, msg, flag = 0):#大数据分析模块实时反馈信息并添加时间信息
+        ISOTIMEFORMAT = '%Y-%m-%d %X'
+        time = datetime.datetime.now()
+        if(flag == 1):
+            self.grids.SetValue("")
+            self.BeginTime = time
+            self.sTime = self.BeginTime
+            cc = self.sTime.strftime(ISOTIMEFORMAT)
+            print flag,"  ",cc
+        elif(flag == 2):
+            self.EndTime = time
+            self.sTime = self.EndTime
+            cc = self.sTime.strftime(ISOTIMEFORMAT)
+            print flag,"  ",cc
+        elif(flag == 3):
+            self.time = self.EndTime - self.BeginTime
+            self.sTime = self.time
+            cc = str(self.sTime)
+            print flag,"  ",cc
+        else:
+            cc = " "
+        self.grids.AppendText(msg)
+        self.grids.AppendText("   " + cc + "\n")
+        # self.bar.SetInsertionPoint(0)
+        f = wx.Font(15, wx.ROMAN, wx.NORMAL, wx.NORMAL, False)
+        self.grids.SetStyle(0, self.bar.GetLastPosition(), wx.TextAttr("black", "white", f))
+
+    def LogMessage(self, msg):
+        self.bar.AppendText(msg)
+        ISOTIMEFORMAT = '%Y-%m-%d %X'
+        cc = datetime.datetime.now().strftime(ISOTIMEFORMAT)
+        self.bar.AppendText("   " + cc + "\n")
+        #self.bar.SetInsertionPoint(0)
+        f = wx.Font(15, wx.ROMAN, wx.NORMAL, wx.NORMAL, False)
         self.bar.SetStyle(0, self.bar.GetLastPosition(), wx.TextAttr("black", "white", f))
 
-class DataShowDialog(wx.Dialog): 
-    def __init__(self, parent): 
-        super(DataShowDialog, self).__init__(parent, title = u"大数据分析-数据显示", size = (700,300)) 
+class DataShowDialog(wx.Dialog):
+    def __init__(self, parent):
+        super(DataShowDialog, self).__init__(parent, title = u"大数据分析-数据显示", size = (700,300))
         self.parent = parent
 
         # get file list from parent
@@ -478,7 +704,7 @@ class DataShowDialog(wx.Dialog):
         self.choices = wx.Choice(self.Panel_ds, -1, choices=self.fileList, style=wx.ALIGN_CENTER)
 
         self.datacols = wx.StaticText(self.Panel_ds, -1, u"数据行数:", style=wx.ALIGN_CENTER)
-        self.DataCols = wx.TextCtrl(self.Panel_ds, -1, r'1000')
+        self.DataCols = wx.TextCtrl(self.Panel_ds, -1, r'500000')
 
         self.SetButton = wx.Button(self.Panel_ds2, label=u'设置')
         self.SetButton.Bind(wx.EVT_BUTTON, self.Set)
@@ -520,8 +746,9 @@ class DataShowDialog(wx.Dialog):
     def Set(self, evt):
         self.selected = self.choices.GetSelection()
         filePath = self.fileList[self.selected]
-        self.parent.ShowGrid(filePath, int(self.DataCols.GetValue()) )
         self.Show(False)
+        self.parent.ShowGrid(filePath, int(self.DataCols.GetValue()))
+
 
     def exit_out(self, event):
         self.Show(False)
@@ -529,9 +756,9 @@ class DataShowDialog(wx.Dialog):
     def OnClose(self, evt):
         evt.Skip()
 
-class DataProcessDialog(wx.Dialog): 
-    def __init__(self, parent): 
-        super(DataProcessDialog, self).__init__(parent, title = u"大数据分析-数据显示", size = (500,300)) 
+class DataProcessDialog(wx.Dialog):
+    def __init__(self, parent):
+        super(DataProcessDialog, self).__init__(parent, title = u"大数据分析-数据显示", size = (500,300))
         self.parent = parent
 
         self.Panel_ds = wx.Panel(self)
@@ -587,7 +814,10 @@ class DataProcessDialog(wx.Dialog):
 
     def Set(self, evt):
         self.selected = self.choices.GetSelection()
-        self.parent.ComputingSetting(int(self.selected) )
+        self.parent.ComputingSetting(int(self.selected))
+        print self.typeList[self.selected]
+        temp = self.parent.bar.GetValue()+"\n"+u"当前选择计算："+self.typeList[self.selected]
+        self.parent.Show_Content(temp)
         self.Show(False)
 
     def exit_out(self, event):
@@ -672,4 +902,5 @@ app = wx.App()
 #frame = log() #调试用，跳过登陆界面
 frame = Demo()
 frame.Show()
+
 app.MainLoop()
